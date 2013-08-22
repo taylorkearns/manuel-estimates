@@ -17,18 +17,18 @@ class Estimates
 
     while true
       search_and_retweet
-      sleep(60)
+      sleep(600)
     end
   end
 
   def search_and_retweet
-    raw_tweets = twitter.search search_term,
+    tweets = twitter.search search_term,
       lang: 'en',
       result_type: 'recent'
 
-    raw_tweets.results.each do |status|
-      next unless status_qualifies(status)
+    statuses = tweets.results.keep_if { |status| status_qualifies(status) }
 
+    statuses.first(5).each do |status|
       begin
         twitter.retweet(status.id)
       rescue Twitter::Error::Unauthorized => error
@@ -38,7 +38,7 @@ class Estimates
   end
 
   def status_qualifies(status)
-    status.text.match(search_term)
+    status.text.match /#{search_term}/
   end
 end
 
