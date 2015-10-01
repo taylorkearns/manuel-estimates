@@ -1,13 +1,13 @@
-require 'rubygems'
-require 'daemons'
-require 'twitter'
-require_relative 'environment.rb'
+require "rubygems"
+require "daemons"
+require "twitter"
+require_relative "environment.rb"
 
-Daemons.run_proc('estimates.rb') do
+Daemons.run_proc("estimates.rb") do
   class Estimates
     attr_accessor :twitter, :search_term
 
-    def initialize(search_term='Estimates')
+    def initialize(search_term="Estimates")
       @twitter = Twitter::REST::Client.new do |config|
         config.consumer_key = EnvironmentVars::TWITTER_CONSUMER_KEY
         config.consumer_secret = EnvironmentVars::TWITTER_CONSUMER_SECRET
@@ -25,8 +25,8 @@ Daemons.run_proc('estimates.rb') do
 
     def search_and_retweet
       tweets = twitter.search search_term,
-        lang: 'en',
-        result_type: 'recent'
+        lang: "en",
+        result_type: "recent"
 
       statuses = tweets.to_a.keep_if { |status| status_qualifies(status) }
       twitter.retweet(statuses.first.id)
