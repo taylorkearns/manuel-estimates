@@ -1,27 +1,25 @@
 require 'rubygems'
 require 'daemons'
+require 'twitter'
+require_relative 'environment.rb'
 
 Daemons.run_proc('estimates.rb') do
-  require 'twitter'
-  require_relative 'environment.rb'
-
-  Twitter.configure do |config|
-    config.consumer_key = EnvironmentVars::TWITTER_CONSUMER_KEY
-    config.consumer_secret = EnvironmentVars::TWITTER_CONSUMER_SECRET
-    config.oauth_token = EnvironmentVars::TWITTER_OAUTH_TOKEN
-    config.oauth_token_secret = EnvironmentVars::TWITTER_OAUTH_TOKEN_SECRET
-  end
-
   class Estimates
     attr_accessor :twitter, :search_term
 
     def initialize(search_term='Estimates')
-      @twitter = Twitter::Client.new
+      @twitter = Twitter::REST::Client.new do |config|
+        config.consumer_key = EnvironmentVars::TWITTER_CONSUMER_KEY
+        config.consumer_secret = EnvironmentVars::TWITTER_CONSUMER_SECRET
+        config.access_token = EnvironmentVars::TWITTER_OAUTH_TOKEN
+        config.access_token_secret = EnvironmentVars::TWITTER_OAUTH_TOKEN_SECRET
+      end
+
       @search_term = search_term
 
       while true
         search_and_retweet
-        sleep(600)
+        sleep(43_200)
       end
     end
 
@@ -30,15 +28,11 @@ Daemons.run_proc('estimates.rb') do
         lang: 'en',
         result_type: 'recent'
 
-      statuses = tweets.results.keep_if { |status| status_qualifies(status) }
+      statuses = tweets.to_a.keep_if { |status| status_qualifies(status) }
+      twitter.retweet(statuses.first.id)
 
-      statuses.first(5).each do |status|
-        begin
-          twitter.retweet(status.id)
-        rescue Twitter::Error::Unauthorized => error
-          puts "#{error.class}: #{error.message}"
-        end
-      end
+    rescue Twitter::Error::Unauthorized => error
+      puts "#{error.class}: #{error.message}"
     end
 
     def status_qualifies(status)
